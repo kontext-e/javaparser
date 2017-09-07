@@ -135,6 +135,8 @@
         <maven-coveralls-plugin.version>4.3.0</maven-coveralls-plugin.version>
         <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
         <bnd-maven-plugin.version>3.3.0</bnd-maven-plugin.version>
+
+        <jqassistant.version>1.2.0</jqassistant.version>
     </properties>
 
     <scm>
@@ -179,6 +181,59 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>com.buschmais.jqassistant.scm</groupId>
+                <artifactId>jqassistant-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>scan</goal>
+                            <goal>analyze</goal>
+                        </goals>
+                        <configuration>
+                            <failOnViolations>true</failOnViolations>
+                            <scanIncludes>
+                                <scanInclude>
+                                    <path>${project.basedir}/.git</path>
+                                </scanInclude>
+                                <scanInclude>
+                                    <path>${project.basedir}/arcdoc</path>
+                                </scanInclude>
+                                <scanInclude>
+                                    <path>${project.basedir}/javaparser-testing/target/site/jacoco</path>
+                                </scanInclude>
+                            </scanIncludes>
+                        </configuration>
+                    </execution>
+                </executions>
+
+                <dependencies>
+                    <dependency>
+                        <groupId>de.kontext-e.jqassistant.plugin</groupId>
+                        <artifactId>jqassistant.plugin.git</artifactId>
+                        <version>1.2.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>de.kontext-e.jqassistant.plugin</groupId>
+                        <artifactId>jqassistant.plugin.jacoco</artifactId>
+                        <version>1.2.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>de.kontext-e.jqassistant.plugin</groupId>
+                        <artifactId>jqassistant.plugin.asciidoc</artifactId>
+                        <version>1.2.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.asciidoctor</groupId>
+                        <artifactId>asciidoctorj</artifactId>
+                        <version>1.5.4.1</version>
+                    </dependency>
+                </dependencies>
+
+            </plugin>
+
         </plugins>
         <pluginManagement>
             <plugins>
@@ -225,6 +280,24 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>com.buschmais.jqassistant.scm</groupId>
+                <artifactId>jqassistant-maven-plugin</artifactId>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
+
+
     <profiles>
         <profile>
             <id>doclint-java8-disable</id>

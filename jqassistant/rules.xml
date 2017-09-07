@@ -1,0 +1,295 @@
+<jqa:jqassistant-rules
+	xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
+
+	 <concept id="td:CalculateMethodComplexity">
+        <description>Calculate Method Complexity.</description>
+        <cypher><![CDATA[
+		MATCH 
+			(cl:Jacoco:Class)--(m:Jacoco:Method)--(c:Jacoco:Counter {type: 'COMPLEXITY'})
+		SET
+			m.complexity = c.missed+c.covered,
+			m.percentCovered = c.covered*100/(c.covered+c.missed)
+		RETURN
+			m.complexity
+        ]]></cypher>
+    </concept>
+
+	 <concept id="td:PermanentExceptionsFromTestCoverage">
+        <description>Permanent Exceptions from Test Coverage.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Permanent Exceptions from Test Coverage'
+			WITH 
+				body
+			MATCH 
+				(class:Asciidoc:Cell {colnumber: 0})<-[:CONTAINS_CELLS]-(body)-[:CONTAINS_CELLS]->(signature:Asciidoc:Cell {colnumber: 1})
+			SET
+				class:IgnoreTestCoverageClass, signature:IgnoreTestCoverageMethod
+			RETURN 
+				class, signature
+        ]]></cypher>
+    </concept>
+	
+	 <concept id="td:TemporaryExceptionsFromTestCoverage">
+        <description>Temporary Exceptions from Test Coverage.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Temporary Exceptions from Test Coverage'
+			WITH 
+				body
+			MATCH 
+				(class:Asciidoc:Cell {colnumber: 0})<-[:CONTAINS_CELLS]-(body)-[:CONTAINS_CELLS]->(signature:Asciidoc:Cell {colnumber: 1})
+			SET
+				class:IgnoreTestCoverageClass, signature:IgnoreTestCoverageMethod
+			RETURN 
+				class, signature
+        ]]></cypher>
+    </concept>
+	
+	<concept id="td:PackagesGenerallyExcludedFromTestCoverageChecks">
+        <description>Mark Asciidoc Table Cells that contain Packages Generally Excluded From Test Coverage Checks.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Packages Generally Excluded From Test Coverage Checks'
+			WITH 
+				body
+			MATCH 
+				(body)-[:CONTAINS_CELLS]->(package:Asciidoc:Cell {colnumber: 0})
+			SET
+				package:IgnoreTestCoveragePackage
+			RETURN 
+				package
+        ]]></cypher>
+    </concept>
+
+	<concept id="td:ClassesGenerallyExcludedFromTestCoverageChecks">
+        <description>Mark Asciidoc Table Cells that contain Classes Generally Excluded From Test Coverage Checks.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Classes Generally Excluded From Test Coverage Checks'
+			WITH 
+				body
+			MATCH 
+				(body)-[:CONTAINS_CELLS]->(class:Asciidoc:Cell {colnumber: 0})
+			SET
+				class:IgnoreTestCoverageClassPattern
+			RETURN 
+				class.text
+        ]]></cypher>
+    </concept>
+
+	<concept id="td:MethodsGenerallyExcludedFromTestCoverageChecks">
+        <description>Methods Generally Excluded From Test Coverage Checks.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Methods Generally Excluded From Test Coverage Checks'
+			WITH 
+				body
+			MATCH 
+				(body)-[:CONTAINS_CELLS]->(signature:Asciidoc:Cell {colnumber: 0})
+			SET
+				signature:IgnoreTestCoverageMethod
+			RETURN 
+				signature
+        ]]></cypher>
+    </concept>
+	
+	<concept id="td:CreateTestCoverageRangeNodesFromAsciidocTable">
+        <description>Create Test Coverage Range nodes from Asciidoc table.</description>
+        <cypher><![CDATA[
+			MATCH 
+				(a:Asciidoc:Table)-[:BODY]->(body)
+			WHERE 
+				a.title='Test Coverage Ranges'
+			WITH 
+				body
+			MATCH 
+				(body)-[:CONTAINS_CELLS]->(from:Asciidoc:Cell {colnumber: 0}),
+				(body)-[:CONTAINS_CELLS]->(to:Asciidoc:Cell {colnumber: 1}),
+				(body)-[:CONTAINS_CELLS]->(coverage:Asciidoc:Cell {colnumber: 2})
+			CREATE
+				(range:TestCoverage:Range {from: toInt(from.text), to: toInt(to.text), requiredCoverage: toInt(coverage.text)})
+			RETURN
+				range.from, range.to, range.requiredCoverage
+        ]]></cypher>
+    </concept>
+	
+	<concept id="td:AssignRequiredTestCoverageToJacocoMethods">
+		<requiresConcept refId="td:CreateTestCoverageRangeNodesFromAsciidocTable" />
+        <description>.</description>
+        <cypher><![CDATA[
+			MATCH
+				(m:Jacoco:Method), (range:TestCoverage:Range)
+			WHERE
+				m.complexity >= range.from
+			AND
+				m.complexity <= range.to
+			SET
+				m.requiredCoverage = range.requiredCoverage
+			RETURN
+				m.signature, m.requiredCoverage
+        ]]></cypher>
+    </concept>
+
+	 <concept id="td:MarkJavaClassesAndMethodsWithIgnoreTestCoverage">
+		<requiresConcept refId="td:PermanentExceptionsFromTestCoverage" />
+		<requiresConcept refId="td:TemporaryExceptionsFromTestCoverage" />
+        <description>Mark Java Classes and Methods with IgnoreTestCoverage.</description>
+        <cypher><![CDATA[
+			MATCH
+				(c:Java:Class)-[:DECLARES]->(m:Java:Method), 
+				(class:IgnoreTestCoverageClass), 
+				(signature:IgnoreTestCoverageMethod)
+			WHERE
+				c.fqn = class.text
+			AND
+				m.signature = signature.text
+			SET
+				c:IgnoreTestCoverage, m:IgnoreTestCoverage
+			RETURN 
+				c, m
+        ]]></cypher>
+    </concept>
+	
+	 <concept id="td:MarkJacocoClassesAndMethodsWithIgnoreTestCoverage">
+		<requiresConcept refId="td:PermanentExceptionsFromTestCoverage" />
+		<requiresConcept refId="td:TemporaryExceptionsFromTestCoverage" />
+        <description>Mark Jacoco Classes and Methods with IgnoreTestCoverage.</description>
+        <cypher><![CDATA[
+			MATCH
+				(c:Jacoco:Class)--(m:Jacoco:Method), 
+				(class:IgnoreTestCoverageClass), 
+				(signature:IgnoreTestCoverageMethod)
+			WHERE
+				c.fqn = class.text
+			AND
+				m.signature = signature.text
+			SET
+				c:IgnoreTestCoverage, m:IgnoreTestCoverage
+			RETURN 
+				c, m
+        ]]></cypher>
+    </concept>
+	
+	 <concept id="td:MarkJacocoMethodsWithIgnoreTestCoverage">
+		<requiresConcept refId="td:MethodsGenerallyExcludedFromTestCoverageChecks" />
+        <description>Mark Jacoco Methods with IgnoreTestCoverage.</description>
+        <cypher><![CDATA[
+			MATCH
+				(m:Jacoco:Method), 
+				(signature:IgnoreTestCoverageMethod)
+			WHERE
+				m.signature = signature.text
+			SET
+				m:IgnoreTestCoverage
+			RETURN 
+				m
+        ]]></cypher>
+    </concept>
+	
+	<concept id="td:MarkJacocoClassesOfWholePackagesWithIgnoreTestCoverage">
+		<requiresConcept refId="td:PackagesGenerallyExcludedFromTestCoverageChecks" />
+        <description>Mark Jacoco Classes of whole packages with IgnoreTestCoverage.</description>
+        <cypher><![CDATA[
+			MATCH
+				(c:Jacoco:Class), 
+				(package:IgnoreTestCoveragePackage)
+			WHERE
+				c.fqn =~ package.text
+			SET
+				c:IgnoreTestCoverage
+			RETURN 
+				c.fqn
+        ]]></cypher>
+    </concept>
+
+	<concept id="td:MarkJacocoClassesOfPatternWithIgnoreTestCoverage">
+		<requiresConcept refId="td:ClassesGenerallyExcludedFromTestCoverageChecks" />
+        <description>Mark Jacoco Classes of defined pattern with IgnoreTestCoverage.</description>
+        <cypher><![CDATA[
+			MATCH
+				(c:Jacoco:Class), 
+				(pattern:IgnoreTestCoverageClassPattern)
+			WHERE
+				c.fqn =~ pattern.text
+			SET
+				c:IgnoreTestCoverage
+			RETURN 
+				c.fqn
+        ]]></cypher>
+    </concept>
+
+	<constraint id="clean-code:TestCoverage">
+		<requiresConcept refId="td:MarkJacocoClassesAndMethodsWithIgnoreTestCoverage" />
+		<requiresConcept refId="td:CalculateMethodComplexity" />
+		<requiresConcept refId="td:MarkJacocoMethodsWithIgnoreTestCoverage" />		
+		<requiresConcept refId="td:MarkJacocoClassesOfWholePackagesWithIgnoreTestCoverage" />		
+		<requiresConcept refId="td:CalculateMethodComplexity" />		
+		<requiresConcept refId="td:AssignRequiredTestCoverageToJacocoMethods" />		
+		<requiresConcept refId="td:MarkJacocoClassesOfPatternWithIgnoreTestCoverage" />		
+
+		<description>...</description>
+		<cypher><![CDATA[
+            MATCH 
+				(cl:Jacoco:Class)--(m:Jacoco:Method)
+            WHERE  
+				m.percentCovered < m.requiredCoverage			
+			AND NOT 
+				cl:IgnoreTestCoverage
+			AND NOT 
+				m:IgnoreTestCoverage
+            RETURN 
+				cl.fqn, m.signature, m.complexity, m.percentCovered
+			ORDER BY 
+				cl.fqn, m.signature
+		]]></cypher>
+	</constraint>
+
+	<constraint id="clean-code:IgnoreWithoutMessage1">
+		<description>All @Ignore annotations must provide a message.
+		</description>
+		<cypher><![CDATA[
+            match
+              (c:Class)-[:DECLARES]->(e:Method)-[:ANNOTATED_BY]->(ignore:Annotation)-[:OF_TYPE]->(ignoreType:Type)
+            where
+              ignoreType.fqn= "org.junit.Ignore"
+              and not (ignore)-[:HAS]->(:Value{name:"value"})
+            return
+              c.fqn, e.name as IgnoreWithoutMessage
+        ]]></cypher>
+	</constraint>
+
+	<constraint id="clean-code:IgnoreWithoutMessage2">
+		<description>All @Ignore annotations must provide a message.
+		</description>
+		<cypher><![CDATA[
+            MATCH
+              (e:Class)-[:ANNOTATED_BY]->(ignore:ANNOTATION)-[:OF_TYPE]->(ignoreType:TYPE)
+            WHERE
+              ignoreType.fqn= "org.junit.Ignore"
+              and not (ignore)-[:HAS]->(:VALUE{NAME:"value"})
+            RETURN
+              e.fqn as IgnoreWithoutMessage
+        ]]></cypher>
+	</constraint>
+
+	<group id="default">
+		<includeConstraint refId="clean-code:TestCoverage"
+			severity="major" />
+		<includeConstraint refId="clean-code:IgnoreWithoutMessage1"
+			severity="minor" />
+		<includeConstraint refId="clean-code:IgnoreWithoutMessage2"
+			severity="minor" />
+	</group>
+
+</jqa:jqassistant-rules>

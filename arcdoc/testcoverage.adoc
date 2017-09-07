@@ -1,0 +1,91 @@
+== On Test Coverage
+
+* write some nice words about Unit Test Coverage Metrics
+
+
+== Unit Test Coverage Rules
+
+* test coverage based on method complexity
+* method complexity in the means of number of branches
+* measure covered branches with relation to all branches
+* the higher the complexity is the higher the coverage has to be
+* divided the complexity into some ranges
+* for each range a percentage of covered branches is requested, see table
+
+.Test Coverage Ranges
+[options="header"]
+|===
+| From Complexity   | To Complexity | Requested Coverage of Branches in %
+| 0                 | 3             | 0
+| 4                 | 5             | 80
+| 6                 | 1000000000    | 90
+|===
+
+== Exceptions from Test Coverage
+
+There may be exceptions from the Test Coverage rules. First, there are Temporary Exceptions which are considered as Technical Debt and
+should be handled as soon as possible. These exceptions are listed in the following table:
+
+.Temporary Exceptions from Test Coverage
+[options="header"]
+|===
+| Class                                                         | Signature                                                                                             | What should be done
+| com.github.javaparser.GeneratedJavaParserSupport              | java.lang.String makeMessageForParseException(com.github.javaparser.ParseException) | m.complexity=11, m.percentCovered=72
+| com.github.javaparser.JavaToken                               | void <init>(com.github.javaparser.Token,java.util.List)   | m.complexity=4, m.percentCovered=75
+| com.github.javaparser.JavadocParser                           | int startsWithAsterisk(java.lang.String)                  | m.complexity=6, m.percentCovered=83
+| com.github.javaparser.JavadocParser                           | java.util.List cleanLines(java.lang.String)               | m.complexity=8, m.percentCovered=62
+| com.github.javaparser.ParseException                          | java.lang.String add_escapes(java.lang.String)            | m.complexity=12, m.percentCovered=16
+| com.github.javaparser.ParseException                          | java.lang.String initialise(com.github.javaparser.Token,int[][],java.lang.String[],java.lang.String) | m.complexity=10, m.percentCovered=80
+| com.github.javaparser.Problem                                 | int lambda$static$6(com.github.javaparser.Problem,com.github.javaparser.Problem) | m.complexity=6, m.percentCovered=16
+| com.github.javaparser.StreamProvider                          | int read(char[],int,int)                                  | m.complexity=4, m.percentCovered=25
+| com.github.javaparser.StringProvider                          | int read(char[],int,int)                                  | m.complexity=4,  m.percentCovered=75
+| com.github.javaparser.TokenMgrException                       | java.lang.String addEscapes(java.lang.String)             | m.complexity=12, m.percentCovered=50
+| com.github.javaparser.TokenTypes                              | int eolTokenKind()                                        | m.complexity=4, m.percentCovered=25
+| com.github.javaparser.metamodel.PropertyMetaModel             | java.lang.Object getValue(com.github.javaparser.ast.Node) | m.complexity=4, m.percentCovered=75
+|===
+
+Next there are Permanent Excpetions. For these methods there was a Code Review and a conscious decision not to check the
+Test Coverage for a special reason. The following table contains this list:
+
+.Permanent Exceptions from Test Coverage
+[options="header"]
+|===
+| Class                                                         | Signature                                                 | Reason
+| com.github.javaparser.TokenTypes                              | com.github.javaparser.JavaToken$Category getCategory(int) | Code Review: coverage high enough
+|===
+
+Some Java Packages are generally excluded from Test Coverage Checks. These packages and the reason for this decisions are
+listed in the following table:
+
+.Packages Generally Excluded From Test Coverage Checks
+[options="header"]
+|===
+| FQN Pattern                                   | Reason
+| com.github.javaparser.ast.*                   | Too much test debt here
+| com.github.javaparser.printer.*               | Too much test debt here
+| com.github.javaparser.utils.*                 | Too much test debt here
+|===
+
+Some Java Classes are generally excluded from Test Coverage Checks. These classes and the reason for this decisions are
+listed in the following table:
+
+.Classes Generally Excluded From Test Coverage Checks
+[options="header"]
+|===
+| Name Pattern                                              | Reason
+| com.github.javaparser.GeneratedJavaParser                 | Different coverage rules for generated classes
+| com.github.javaparser.CommentsInserter                    | TODO ask the developers
+| com.github.javaparser.GeneratedJavaParserTokenManager     | TODO ask the developers
+| com.github.javaparser.JavaCharStream                      | TODO ask the developers
+|===
+
+Some Java Methods are generally excluded from Test Coverage Checks. These methods and the reason for this decisions are
+listed in the following table:
+
+.Methods Generally Excluded From Test Coverage Checks
+[options="header"]
+|===
+| Signature                                             | Reason
+| boolean equals(java.lang.Object)                      | Generated by IDE
+| int hashCode()                                        | Generated by IDE
+|===
